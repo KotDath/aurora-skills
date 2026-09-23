@@ -13,4 +13,4 @@ For an unspecified output, use an app-named child directory of the current direc
 
 After a successful create, the script writes the absolute SDK root to `.aurora-flutter-sdk` in the project and ignores that local file in Git. Read it on every later turn so the path survives context changes. Check that `pubspec.yaml` and the Aurora platform files were created. Report the project location, template, effective SDK path, and Flutter version. Build or run the app only when requested.
 
-To add packages after setup, use the separate `aurora-flutter-add-dependency` skill. Its packaged `checked-dependencies.yaml` is the dependency acceptance list; do not duplicate that list here.
+To add packages after setup, use the separate `aurora-flutter-add-dependency` skill. Its manually maintained `scripts/checked-dependencies.yaml` is the dependency acceptance list; do not duplicate that list here.

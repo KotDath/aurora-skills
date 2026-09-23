@@ -1,6 +1,7 @@
+# Manually maintained allowlist. The checker reads this file and never edits it.
 # Packages present in Aurora Pub are accepted by project policy.
 # Other names passed source review of a resolved dependency closure with Aurora Flutter 3.41.4.
-# Names are intentionally unpinned; check newly resolved versions before relying on source review.
+# Names are intentionally unpinned.
 aurora_pub:
 - _fe_analyzer_shared
 - abt

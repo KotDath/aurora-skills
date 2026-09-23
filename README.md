@@ -24,8 +24,8 @@ For a non-interactive OpenCode project install, add `--agent opencode --yes`.
 | [`aurora-rpm-validate`](skills/rpm/aurora-rpm-validate/SKILL.md) | Validate a built Aurora RPM against its security profile. |
 | [`aurora-rpm-sign`](skills/rpm/aurora-rpm-sign/SKILL.md) | Sign a built Aurora RPM, with explicit handling of an existing signature. |
 | [`aurora-flutter-setup-project`](skills/flutter/aurora-flutter-setup-project/SKILL.md) | Create an Aurora Flutter app or plugin, or add Aurora support to an existing project; remember the local SDK path. |
-| [`aurora-flutter-add-dependency`](skills/flutter/aurora-flutter-add-dependency/SKILL.md) | Check or add a dependency with Aurora Flutter and inspect the resolved dependency tree. |
+| [`aurora-flutter-add-dependency`](skills/flutter/aurora-flutter-add-dependency/SKILL.md) | Check a dependency against the allowlist, then add an allowed package with Aurora Flutter. |
 
-The [Flutter Aurora dependency checklist](checked-dependencies.yaml) is the source of truth for the add-dependency skill. Packages in Aurora Pub are accepted by project policy. Packages outside Aurora Pub appear only after source review of their dependency trees. The checklist contains package names, not version pins; check the resolved version and its dependencies when adding one.
+The manually maintained [Flutter Aurora dependency checklist](skills/flutter/aurora-flutter-add-dependency/scripts/checked-dependencies.yaml) sits next to its checker. The checker only looks up package names; for an unknown name it returns links for source review. Packages in Aurora Pub are accepted by project policy. The list contains package names, not version pins.
 
 Example request: “Create an Aurora OS Qt app in this directory. Suggest a name and project settings first.” The skill uses information already present in the request, proposes missing values in conversation, and generates the project after they are settled. Ask it to work “without questions” to use autonomous defaults.
