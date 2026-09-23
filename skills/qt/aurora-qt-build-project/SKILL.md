@@ -9,13 +9,13 @@ Build an existing Qt application with the Aurora SDK command-line tool. Speak in
 
 ## Resolve the build request
 
-- Use the project path and `sfdk` path already supplied by the user. Otherwise the script checks `~/AuroraOS/bin/sfdk`. If it is absent, ask for the SDK executable path; the script may suggest a `PATH` match but does not silently choose it.
+- Use a Qt SDK root or `sfdk` executable explicitly supplied by the user, otherwise the project's `.aurora/sdk.json` `sfdk` value, otherwise `~/AuroraOS/bin/sfdk`. If none exists, ask for the SDK path; the script may suggest a `PATH` match but does not silently choose it. A supplied `--sfdk` path updates the project record after validation.
 - Identify the requested target or architecture. `x86_64` is for the emulator; `aarch64` and `armv7hl` are device architectures. Do not infer a device's architecture from its name. List installed targets with `--list-targets`; select an exact target from that list. An architecture alone is sufficient when it matches one installed target. If multiple SDK releases match, ask which one. If the user requests a no-questions build without a platform, use an installed `x86_64` target for a smoke build when unambiguous and disclose that choice.
 - Default to a release build. Use `--debug` for an explicitly requested debug build. Run `--check` when the user asks for quality or package validation; `sfdk check` is distinct from the `%check` phase of `sfdk build`.
 
 ## Run and report
 
-Call the script with `--project`, the chosen `--target` or `--arch`, and optional `--sfdk`, `--debug`, `--check`, or `--build-dir`. By default it creates a sibling build directory named with the full target. It passes the target as a one-command `sfdk -c target=...` option, leaving session and global target settings alone. The build itself may update its SDK target snapshot to satisfy declared dependencies.
+Call the script with `--project`, the chosen `--target` or `--arch`, and optional `--sfdk`, `--debug`, `--check`, or `--build-dir`. It records the validated executable in the Git-ignored `.aurora/sdk.json`, preserving any `flutter` value there. By default it creates a sibling build directory named with the full target. It passes the target as a one-command `sfdk -c target=...` option, leaving session and global target settings alone. The build itself may update its SDK target snapshot to satisfy declared dependencies.
 
 If the project is outside the SDK's shared workspace, report the SDK error and ask the user for a workspace-accessible project location; do not relocate or copy it automatically. A shadow build keeps compiled artifacts separate, but project build rules can still edit source files (the qmake template updates translations); inspect and report any resulting source changes. Do not install targets or packages, change global SDK configuration, sign RPMs, or deploy to a device as part of a build request. For unusual project layouts or redirected RPM output, consult [references/sfdk.md](references/sfdk.md).
 

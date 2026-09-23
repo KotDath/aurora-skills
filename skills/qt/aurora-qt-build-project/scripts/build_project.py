@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import shlex
@@ -14,17 +15,56 @@ from pathlib import Path
 
 
 ARCHES = ("aarch64", "armv7hl", "x86_64")
+SDK_CONFIG = Path(".aurora/sdk.json")
 
 
 class BuildError(Exception):
     pass
 
 
-def sfdk_path(value: str | None) -> Path:
+def project_sdk_config(project: Path) -> dict:
+    path = project / SDK_CONFIG
+    if not path.is_file():
+        return {}
+    try:
+        config = json.loads(path.read_text())
+    except json.JSONDecodeError as exc:
+        raise BuildError(f"Invalid JSON in {path}: {exc}") from exc
+    if not isinstance(config, dict) or any(
+        key in config and (
+            not isinstance(config[key], str)
+            or not config[key].strip()
+            or not Path(config[key]).is_absolute()
+        )
+        for key in ("flutter", "sfdk")
+    ):
+        raise BuildError(f"Invalid SDK paths in {path}")
+    return config
+
+
+def record_sfdk(project: Path, sfdk: Path) -> None:
+    path = project / SDK_CONFIG
+    path.parent.mkdir(parents=True, exist_ok=True)
+    config = project_sdk_config(project)
+    if config.get("sfdk") != str(sfdk):
+        config["sfdk"] = str(sfdk)
+        path.write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n")
+    ignore = project / ".gitignore"
+    lines = ignore.read_text().splitlines() if ignore.is_file() else []
+    entry = f"/{SDK_CONFIG.as_posix()}"
+    if entry not in lines:
+        ignore.write_text("\n".join([*lines, entry]) + "\n")
+
+
+def sfdk_path(value: str | None, project: Path | None = None) -> Path:
     if value:
         path = Path(value).expanduser().resolve()
     else:
-        path = Path.home() / "AuroraOS" / "bin" / "sfdk"
+        recorded = project_sdk_config(project).get("sfdk") if project else None
+        path = Path(recorded).expanduser().resolve() if recorded else Path.home() / "AuroraOS" / "bin" / "sfdk"
+    if path.is_dir():
+        path = path / "bin" / "sfdk"
+    if not value:
         if not path.is_file():
             found = shutil.which("sfdk")
             hint = f" Found in PATH: {found}." if found else ""
@@ -134,7 +174,7 @@ def built_rpms(log: Path, build_dir: Path, previous: dict[Path, int]) -> list[Pa
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project", default=".", help="Aurora Qt project directory")
-    parser.add_argument("--sfdk", help="Path to sfdk; defaults to ~/AuroraOS/bin/sfdk")
+    parser.add_argument("--sfdk", help="Path to sfdk; overrides the project SDK record or defaults to ~/AuroraOS/bin/sfdk")
     parser.add_argument("--target", help="Exact installed target name")
     parser.add_argument("--arch", choices=ARCHES, help="Architecture if it identifies one target")
     parser.add_argument("--build-dir", help="Shadow build directory; defaults to a sibling of the project")
@@ -145,7 +185,8 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        sfdk = sfdk_path(args.sfdk)
+        project_candidate = Path(args.project).expanduser().resolve()
+        sfdk = sfdk_path(args.sfdk, project_candidate if project_candidate.is_dir() else None)
         targets = installed_targets(sfdk)
         if args.list_targets:
             print("sfdk:", sfdk)
@@ -154,6 +195,7 @@ def main() -> int:
             return 0
         target = select_target(targets, args.target, args.arch)
         project = project_path(args.project)
+        record_sfdk(project, sfdk)
         specs = sorted((project / "rpm").glob("*.spec"))
         if args.specfile:
             spec = Path(args.specfile).expanduser().resolve()

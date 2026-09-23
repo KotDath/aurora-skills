@@ -8,11 +8,12 @@ import json
 import os
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 
-SDK_FILE = ".aurora-flutter-sdk"
+SDK_FILE = Path(".aurora/sdk.json")
+LEGACY_SDK_FILE = ".aurora-flutter-sdk"
+DEFAULT_SFDK = Path.home() / "AuroraOS" / "bin" / "sfdk"
 TEMPLATES = ("app", "plugin", "plugin_qt", "plugin_ffi")
 
 
@@ -20,12 +21,30 @@ def fail(message: str) -> None:
     raise SystemExit(message)
 
 
-def find_recorded_sdk(project: Path) -> str | None:
-    for directory in (project, *project.parents):
-        path = directory / SDK_FILE
-        if path.is_file():
-            return path.read_text().strip()
-    return None
+def read_sdk_config(project: Path) -> dict:
+    config_path = project / SDK_FILE
+    legacy_path = project / LEGACY_SDK_FILE
+    config = {}
+    if config_path.is_file():
+        try:
+            config = json.loads(config_path.read_text())
+        except json.JSONDecodeError:
+            fail(f"Invalid JSON in {config_path}")
+        if not isinstance(config, dict) or any(
+            key in config and (
+                not isinstance(config[key], str)
+                or not config[key].strip()
+                or not Path(config[key]).is_absolute()
+            )
+            for key in ("flutter", "sfdk")
+        ):
+            fail(f"Invalid SDK paths in {config_path}")
+    if legacy_path.is_file():
+        legacy = legacy_path.read_text().strip()
+        if config.get("flutter") and Path(config["flutter"]).expanduser().resolve() != Path(legacy).expanduser().resolve():
+            fail(f"Conflicting SDK paths in {config_path} and {legacy_path}")
+        config.setdefault("flutter", legacy)
+    return config
 
 
 def validate_sdk(value: str) -> tuple[Path, dict]:
@@ -46,20 +65,31 @@ def validate_sdk(value: str) -> tuple[Path, dict]:
     return sdk, version
 
 
-def record_sdk(project: Path, sdk: Path) -> None:
-    (project / SDK_FILE).write_text(str(sdk) + "\n")
+def record_sdk(project: Path, sdk: Path, sfdk: Path | None) -> None:
+    config_path = project / SDK_FILE
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config = json.loads(config_path.read_text()) if config_path.is_file() else {}
+    config["flutter"] = str(sdk)
+    if sfdk:
+        config["sfdk"] = str(sfdk)
+    config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n")
+    legacy_path = project / LEGACY_SDK_FILE
+    if legacy_path.is_file():
+        legacy_path.unlink()
     ignore = project / ".gitignore"
     old = ignore.read_text() if ignore.exists() else ""
-    lines = old.splitlines()
-    if f"/{SDK_FILE}" not in lines:
-        separator = "" if not old or old.endswith("\n") else "\n"
-        ignore.write_text(old + separator + f"/{SDK_FILE}\n")
+    lines = [line for line in old.splitlines() if line != f"/{LEGACY_SDK_FILE}"]
+    if f"/{SDK_FILE.as_posix()}" not in lines:
+        lines.append(f"/{SDK_FILE.as_posix()}")
+    if lines != old.splitlines():
+        ignore.write_text("\n".join(lines) + "\n")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True, help="New project directory or existing Flutter project")
     parser.add_argument("--flutter-sdk", help="Aurora Flutter SDK root or bin/flutter path")
+    parser.add_argument("--sfdk", help="Optional Qt SDK root or sfdk executable; defaults to ~/AuroraOS/bin/sfdk when installed")
     parser.add_argument("--template", choices=TEMPLATES, default="app")
     parser.add_argument("--org", default="ru.example")
     parser.add_argument("--project-name")
@@ -70,10 +100,29 @@ def main() -> None:
     args = parser.parse_args()
 
     output = args.output.expanduser().resolve()
-    sdk_value = args.flutter_sdk or os.environ.get("AURORA_FLUTTER_ROOT") or find_recorded_sdk(output)
+    config = read_sdk_config(output)
+    recorded_sdk = config.get("flutter")
+    if recorded_sdk and args.flutter_sdk:
+        supplied = Path(args.flutter_sdk).expanduser().resolve()
+        supplied_root = supplied.parent.parent if supplied.name == "flutter" and supplied.is_file() else supplied
+        if supplied_root != Path(recorded_sdk).expanduser().resolve():
+            fail(f"Requested SDK conflicts with recorded SDK in {output / SDK_FILE}")
+    sdk_value = recorded_sdk or args.flutter_sdk
     if not sdk_value:
-        fail("Provide --flutter-sdk or AURORA_FLUTTER_ROOT; no recorded SDK path was found")
+        fail("Provide --flutter-sdk explicitly; no project Flutter SDK path was found")
     sdk, version = validate_sdk(sdk_value)
+    if args.sfdk:
+        sfdk = Path(args.sfdk).expanduser().resolve()
+        if sfdk.is_dir():
+            sfdk = sfdk / "bin" / "sfdk"
+        if not sfdk.is_file() or not os.access(sfdk, os.X_OK):
+            fail(f"sfdk is not an executable file: {sfdk}")
+    elif config.get("sfdk"):
+        sfdk = Path(config["sfdk"])
+    elif DEFAULT_SFDK.is_file() and os.access(DEFAULT_SFDK, os.X_OK):
+        sfdk = DEFAULT_SFDK
+    else:
+        sfdk = None
 
     if args.record_only and not args.existing:
         fail("--record-only requires --existing")
@@ -106,11 +155,12 @@ def main() -> None:
         if result.returncode:
             fail(f"Aurora Flutter create failed with exit code {result.returncode}")
 
-    record_sdk(output, sdk)
+    record_sdk(output, sdk, sfdk)
     print(json.dumps({"project": str(output), "flutter_sdk": str(sdk),
                       "flutter_version": version.get("flutterVersion"),
                       "template": "existing" if args.existing else args.template,
-                      "sdk_file": str(output / SDK_FILE)}, ensure_ascii=False))
+                      "sdk_file": str(output / SDK_FILE),
+                      "sfdk": str(sfdk) if sfdk else None}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

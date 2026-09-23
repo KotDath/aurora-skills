@@ -28,4 +28,6 @@ For a non-interactive OpenCode project install, add `--agent opencode --yes`.
 
 The manually maintained [Flutter Aurora dependency checklist](skills/flutter/aurora-flutter-add-dependency/scripts/checked-dependencies.yaml) sits next to its checker. It lists packages to add directly, omitting federated platform interfaces and platform implementations when the main plugin is listed. The checker only looks up package names; for an unknown name it returns links for source review. Listed Aurora Pub packages are accepted by project policy. The list contains package names, not version pins.
 
+Generated projects keep local SDK paths in Git-ignored `.aurora/sdk.json`: `flutter` is an explicitly chosen Aurora Flutter SDK root; `sfdk` defaults to `~/AuroraOS/bin/sfdk` when installed and can be changed with `--sfdk` in the setup or Qt build scripts.
+
 Example request: “Create an Aurora OS Qt app in this directory. Suggest a name and project settings first.” The skill uses information already present in the request, proposes missing values in conversation, and generates the project after they are settled. Ask it to work “without questions” to use autonomous defaults.

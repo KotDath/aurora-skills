@@ -65,6 +65,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--version", help="RPM version; defaults to 0.1.0")
     parser.add_argument("--url", help="Project URL for the RPM spec")
     parser.add_argument("--template-dir", type=Path, help="Use an existing checkout instead of downloading (offline/testing)")
+    parser.add_argument("--sfdk", help="Optional Qt SDK root or sfdk executable; defaults to ~/AuroraOS/bin/sfdk when installed")
     return parser.parse_args()
 
 
@@ -279,16 +280,45 @@ def publish(stage: Path, output: Path) -> None:
             os.replace(child, output / child.name)
 
 
+def sdk_tool(value: str | None) -> Path | None:
+    default = Path.home() / "AuroraOS" / "bin" / "sfdk"
+    path = Path(value).expanduser().resolve() if value else default
+    if path.is_dir():
+        path = path / "bin" / "sfdk"
+    if not value and not path.is_file():
+        return None
+    if not path.is_file() or not os.access(path, os.X_OK):
+        raise SetupError(f"sfdk is not an executable file: {path}")
+    return path
+
+
+def record_sfdk(output: Path, sfdk: Path) -> None:
+    config_path = output / ".aurora" / "sdk.json"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config = json.loads(config_path.read_text()) if config_path.is_file() else {}
+    if not isinstance(config, dict):
+        raise SetupError(f"Invalid SDK settings in {config_path}")
+    config["sfdk"] = str(sfdk)
+    config_path.write_text(json.dumps(config, indent=2) + "\n")
+    ignore = output / ".gitignore"
+    lines = ignore.read_text().splitlines() if ignore.is_file() else []
+    if "/.aurora/sdk.json" not in lines:
+        ignore.write_text("\n".join([*lines, "/.aurora/sdk.json"]) + "\n")
+
+
 def main() -> int:
     try:
         args = parse_args()
         branch, output, values = validate(args)
+        sfdk = sdk_tool(args.sfdk)
         with tempfile.TemporaryDirectory(prefix="aurora-template-") as temporary:
             source, commit = template_source(args, branch, Path(temporary))
             with tempfile.TemporaryDirectory(prefix=".aurora-project-", dir=output.parent) as staging:
                 stage = Path(staging)
                 write_project(source, stage, args.build_system, values, branch, commit)
                 check_project(stage, args.build_system, values)
+                if sfdk:
+                    record_sfdk(stage, sfdk)
                 publish(stage, output)
         warnings = ["Template Aurora icon artwork is still present"]
         if values["org"] == "ru.example":
@@ -307,7 +337,7 @@ def main() -> int:
             )
             if getattr(args, key) is None
         }
-        print(json.dumps({"output": str(output), "package_id": values["package"], "build_system": args.build_system, "template_branch": branch, "template_commit": commit, "checks": "static checks passed", "defaults_used": defaults_used, "warnings": warnings}, ensure_ascii=False, indent=2))
+        print(json.dumps({"output": str(output), "package_id": values["package"], "build_system": args.build_system, "template_branch": branch, "template_commit": commit, "checks": "static checks passed", "defaults_used": defaults_used, "sfdk": str(sfdk) if sfdk else None, "sdk_config": str(output / '.aurora/sdk.json') if sfdk else None, "warnings": warnings}, ensure_ascii=False, indent=2))
         return 0
     except (SetupError, subprocess.CalledProcessError, OSError) as error:
         print(f"setup-project: {error}", file=sys.stderr)
