@@ -22,6 +22,6 @@ For a non-interactive OpenCode project install, add `--agent opencode --yes`.
 | [`aurora-rpm-validate`](skills/rpm/aurora-rpm-validate/SKILL.md) | Validate a built Aurora RPM against its security profile. |
 | [`aurora-rpm-sign`](skills/rpm/aurora-rpm-sign/SKILL.md) | Sign a built Aurora RPM, with explicit handling of an existing signature. |
 
-The [Flutter Aurora 3.41.4 empirical package list](data/flutter/empirical-pure-packages-3.41.4.yaml) records exact package versions and their inspected runtime dependency closures. It is based on source inspection, not device testing.
+The [Flutter Aurora dependency checklist](checked-dependencies.yaml) lists package names whose resolved dependency trees passed source inspection with Flutter Aurora 3.41.4. Recheck new versions before relying on the list.
 
 Example request: “Create an Aurora OS Qt app in this directory. Suggest a name and project settings first.” The skill uses information already present in the request, proposes missing values in conversation, and generates the project after they are settled. Ask it to work “without questions” to use autonomous defaults.
