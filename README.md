@@ -9,6 +9,8 @@ npx skills add KotDath/aurora-skills --skill aurora-qt-setup-project
 npx skills add KotDath/aurora-skills --skill aurora-qt-build-project
 npx skills add KotDath/aurora-skills --skill aurora-rpm-validate
 npx skills add KotDath/aurora-skills --skill aurora-rpm-sign
+npx skills add KotDath/aurora-skills --skill aurora-flutter-setup-project
+npx skills add KotDath/aurora-skills --skill aurora-flutter-add-dependency
 ```
 
 For a non-interactive OpenCode project install, add `--agent opencode --yes`.
@@ -21,7 +23,9 @@ For a non-interactive OpenCode project install, add `--agent opencode --yes`.
 | [`aurora-qt-build-project`](skills/qt/aurora-qt-build-project/SKILL.md) | Build an existing Aurora Qt project for an installed sfdk target and produce RPM packages. |
 | [`aurora-rpm-validate`](skills/rpm/aurora-rpm-validate/SKILL.md) | Validate a built Aurora RPM against its security profile. |
 | [`aurora-rpm-sign`](skills/rpm/aurora-rpm-sign/SKILL.md) | Sign a built Aurora RPM, with explicit handling of an existing signature. |
+| [`aurora-flutter-setup-project`](skills/flutter/aurora-flutter-setup-project/SKILL.md) | Create an Aurora Flutter app or plugin, or add Aurora support to an existing project; remember the local SDK path. |
+| [`aurora-flutter-add-dependency`](skills/flutter/aurora-flutter-add-dependency/SKILL.md) | Check or add a dependency with Aurora Flutter and inspect the resolved dependency tree. |
 
-The [Flutter Aurora dependency checklist](checked-dependencies.yaml) lists package names whose resolved dependency trees passed source inspection with Flutter Aurora 3.41.4. Recheck new versions before relying on the list.
+The [Flutter Aurora dependency checklist](checked-dependencies.yaml) is the source of truth for the add-dependency skill. Packages in Aurora Pub are accepted by project policy. Packages outside Aurora Pub appear only after source review of their dependency trees. The checklist contains package names, not version pins; check the resolved version and its dependencies when adding one.
 
 Example request: “Create an Aurora OS Qt app in this directory. Suggest a name and project settings first.” The skill uses information already present in the request, proposes missing values in conversation, and generates the project after they are settled. Ask it to work “without questions” to use autonomous defaults.
