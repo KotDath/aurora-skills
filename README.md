@@ -1,33 +1,58 @@
+[RU](README.ru.md) | [**EN**](README.md)
+
 # aurora-skills
 
-Agent skills for developing applications for Aurora OS.
+Agent skills for developing applications for Aurora OS, plus a utility skill for reporting agent issues.
 
 ## Install
 
+### With `npx skills`
+
+Run the command from the project where you want the skills. To install **all skills for all supported agents** without prompts:
+
 ```bash
-npx skills add KotDath/aurora-skills --skill aurora-qt-setup-project
-npx skills add KotDath/aurora-skills --skill aurora-qt-build-project
-npx skills add KotDath/aurora-skills --skill aurora-rpm-validate
-npx skills add KotDath/aurora-skills --skill aurora-rpm-sign
-npx skills add KotDath/aurora-skills --skill aurora-flutter-setup-project
-npx skills add KotDath/aurora-skills --skill aurora-flutter-add-dependency
+npx skills add KotDath/aurora-skills --all
 ```
 
-For a non-interactive OpenCode project install, add `--agent opencode --yes`.
+To install all skills while choosing the target agents interactively, or to install one specific skill:
 
-## Available skills
+```bash
+npx skills add KotDath/aurora-skills --skill '*'
+npx skills add KotDath/aurora-skills --skill aurora-qt-setup-project
+```
+
+Replace `aurora-qt-setup-project` with any name from the table below. Add `--copy` to copy files instead of creating links, or `--global` to install for your user across projects.
+
+### By copying files
+
+Clone the repository and copy the **whole skill directory**, including its `scripts/` and `references/` when present. Project-local `.agents/skills/` is discovered by Codex, Pi, OMP, and OpenCode.
+
+```bash
+git clone https://github.com/KotDath/aurora-skills.git
+cd aurora-skills
+PROJECT=/path/to/your/project
+mkdir -p "$PROJECT/.agents/skills"
+
+# All skills:
+cp -R skills/*/* "$PROJECT/.agents/skills/"
+```
+
+To copy just one skill instead, replace the last command with `cp -R skills/qt/aurora-qt-setup-project "$PROJECT/.agents/skills/"` (or another skill directory from the table).
+
+For installation across projects, use `~/.agents/skills/` as the destination instead.
+
+## Skills
 
 | Skill | Purpose |
 | --- | --- |
-| [`aurora-qt-setup-project`](skills/qt/aurora-qt-setup-project/SKILL.md) | Create a Qt/QML project from Aurora OS ApplicationTemplate using qmake or CMake. |
-| [`aurora-qt-build-project`](skills/qt/aurora-qt-build-project/SKILL.md) | Build an existing Aurora Qt project for an installed sfdk target and produce RPM packages. |
-| [`aurora-rpm-validate`](skills/rpm/aurora-rpm-validate/SKILL.md) | Validate a built Aurora RPM against its security profile. |
-| [`aurora-rpm-sign`](skills/rpm/aurora-rpm-sign/SKILL.md) | Sign a built Aurora RPM, with explicit handling of an existing signature. |
-| [`aurora-flutter-setup-project`](skills/flutter/aurora-flutter-setup-project/SKILL.md) | Create an Aurora Flutter app or plugin, or add Aurora support to an existing project; remember the local SDK path. |
-| [`aurora-flutter-add-dependency`](skills/flutter/aurora-flutter-add-dependency/SKILL.md) | Check a dependency against the allowlist, then add an allowed package with Aurora Flutter. |
+| [`aurora-qt-setup-project`](skills/qt/aurora-qt-setup-project/SKILL.md) | Create a Qt/QML application from Aurora OS ApplicationTemplate with qmake or CMake. |
+| [`aurora-qt-build-project`](skills/qt/aurora-qt-build-project/SKILL.md) | Build an Aurora Qt project with `sfdk` and produce RPM packages. |
+| [`aurora-rpm-validate`](skills/rpm/aurora-rpm-validate/SKILL.md) | Validate an Aurora RPM against its security profile. |
+| [`aurora-rpm-sign`](skills/rpm/aurora-rpm-sign/SKILL.md) | Sign an Aurora RPM with a developer key and certificate. |
+| [`aurora-flutter-setup-project`](skills/flutter/aurora-flutter-setup-project/SKILL.md) | Create an Aurora Flutter app or plugin, or add Aurora support to an existing project. |
+| [`aurora-flutter-add-dependency`](skills/flutter/aurora-flutter-add-dependency/SKILL.md) | Check a dependency against the curated list and add it with Aurora Flutter. |
+| [`report-issue`](skills/util/report-issue/SKILL.md) | Collect an issue ZIP with the current agent session and descendant subagent sessions. |
 
-The manually maintained [Flutter Aurora dependency checklist](skills/flutter/aurora-flutter-add-dependency/scripts/checked-dependencies.yaml) sits next to its checker. It lists packages to add directly, omitting federated platform interfaces and platform implementations when the main plugin is listed. The checker only looks up package names; for an unknown name it returns links for source review. Listed Aurora Pub packages are accepted by project policy. The list contains package names, not version pins.
+The Flutter [checked dependency list](skills/flutter/aurora-flutter-add-dependency/scripts/checked-dependencies.yaml) is maintained manually next to its checker. It records package names without version pins; listed Aurora Pub packages are accepted by project policy.
 
-Generated projects keep local SDK paths in Git-ignored `.aurora/sdk.json`: `flutter` is an explicitly chosen Aurora Flutter SDK root; `sfdk` defaults to `~/AuroraOS/bin/sfdk` when installed and can be changed with `--sfdk` in the setup or Qt build scripts.
-
-Example request: “Create an Aurora OS Qt app in this directory. Suggest a name and project settings first.” The skill uses information already present in the request, proposes missing values in conversation, and generates the project after they are settled. Ask it to work “without questions” to use autonomous defaults.
+Generated projects store local SDK paths in Git-ignored `.aurora/sdk.json`. The Aurora Flutter SDK path is explicitly chosen; `sfdk` defaults to `~/AuroraOS/bin/sfdk` when available.
