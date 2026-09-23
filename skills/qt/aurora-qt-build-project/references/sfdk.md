@@ -1,0 +1,11 @@
+# sfdk build notes
+
+The official [sfdk guide](https://developer.auroraos.ru/doc/sdk/app_development/build/build_engine/sfdk) describes installed targets, shadow builds, RPM output and package checks. The [IDE build guide](https://developer.auroraos.ru/doc/sdk/app_development/work/build) explains SDK shared workspace paths and architecture choices. Check the installed tool's `--help`, `tools --help`, `build --help`, and `check --help` when behavior differs by SDK release.
+
+- `sfdk tools target list` lists installed targets and their snapshots. Select a target row, not a `.default` snapshot row. Target names vary by SDK release: do not construct one from an architecture string.
+- `sfdk -c target=<exact-target> build <source-directory>` runs from the build directory. The source argument selects a shadow build. `build-init` is implicit. RPMs normally appear in `RPMS/` under the build directory. Project build rules may still alter source files, such as translation catalogs.
+- `sfdk config target=...` persists at session scope; `sfdk config --global target=...` persists globally. The global `-c target=...` option applies to one command. It must precede the subcommand.
+- `sfdk build --enable-debug` adds debug information. `sfdk build --sign` signs packages and is outside this skill's default scope. `sfdk build` executes the RPM spec's `%check` section unless `--no-check` is passed. `sfdk check` is a separate quality-check command; its default levels are static source and package checks. Review its diagnostics as well as its exit code.
+- Separate build directories prevent target changes from reusing artifacts compiled for another target. `sfdk` may be configured with `output-dir` or `output-prefix`, so successful RPM output can be outside the build directory's `RPMS/`.
+- The build engine shares the user's home directory by default, or an alternate workspace configured during SDK installation. A project and its build directory must be visible through that shared workspace. The engine starts automatically for commands that require it.
+- Qt qmake and CMake projects can use shadow builds when their RPM spec's build and install phases are implemented through those systems. A custom spec with extra steps may require project-specific work. Multiple spec files require an explicit `--specfile` selection.
