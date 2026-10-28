@@ -4,6 +4,8 @@
 
 Agent skills for developing applications for Aurora OS, plus a utility skill for reporting agent issues.
 
+> **For AI agents:** Read [AGENTS.md](AGENTS.md) first for the project overview, skill selection entry point, and skill catalog.
+
 ## Install
 
 ### With `npx skills`
