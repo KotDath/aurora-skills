@@ -18,14 +18,16 @@ To install all skills while choosing the target agents interactively, or to inst
 
 ```bash
 npx skills add KotDath/aurora-skills --skill '*'
-npx skills add KotDath/aurora-skills --skill aurora-qt-setup-project
+npx skills add KotDath/aurora-skills --skill setup-aurora-skills
 ```
 
-Replace `aurora-qt-setup-project` with any name from the table below. Add `--copy` to copy files instead of creating links, or `--global` to install for your user across projects.
+Replace `setup-aurora-skills` with any name from the table below. Add `--copy` to copy files instead of creating links, or `--global` to install for your user across projects.
+
+For OpenCode only, install the complete set with `npx skills add KotDath/aurora-skills --agent opencode --skill '*'`. The shared setup can then load the appropriate specialized skills without a second installation step.
 
 ### By copying files
 
-Clone the repository and copy the **whole skill directory**, including its `scripts/` and `references/` when present. Project-local `.agents/skills/` is discovered by Codex, Pi, OMP, and OpenCode.
+Clone the repository and copy the **whole skill directory**, including its `scripts/`, `references/`, and `assets/` when present. Project-local `.agents/skills/` is discovered by Codex, Pi, OMP, and OpenCode.
 
 ```bash
 git clone https://github.com/KotDath/aurora-skills.git
@@ -41,11 +43,20 @@ To copy just one skill instead, replace the last command with `cp -R skills/qt/a
 
 For installation across projects, use `~/.agents/skills/` as the destination instead.
 
+## Start with a project interview
+
+Ask your agent to use `setup-aurora-skills`, for example: “Help me set up an Aurora project. Ask me which type of project and toolchain I need.” It inspects an existing project first, asks only about missing choices, and distinguishes Qt/qmake, Qt/CMake, CMake + Conan, Flutter apps, and Flutter plugins using method channels, Qt, or FFI. It also identifies existing projects that need Aurora support or plugin porting work.
+
+The setup records local SDKs in Git-ignored `.aurora/sdk.json` and adds a short project workflow section to `AGENTS.md` (or the project's existing `CLAUDE.md`). It then uses the relevant installed skills for the requested creation or build. Install those skills too when needed; the interview skill does not silently install the collection. Rerunning setup reuses prior answers and updates the chosen settings without regenerating the app.
+
+CMake + Conan uses the Qt generator's `--build-system cmake --conan` mode: an empty recipe, a pinned Aurora Conan distribution, and RPM build/deployment integration. It does not add libraries implicitly. Creating an Aurora platform skeleton for an upstream Flutter plugin does not complete its port; remaining work is reported separately. Direct use of any specialized skill remains supported without running the interview first.
+
 ## Skills
 
 | Skill | Purpose |
 | --- | --- |
-| [`aurora-qt-setup-project`](skills/qt/aurora-qt-setup-project/SKILL.md) | Create a Qt/QML application from Aurora OS ApplicationTemplate with qmake or CMake. |
+| [`setup-aurora-skills`](skills/setup/setup-aurora-skills/SKILL.md) | Interview the user, identify the project type, configure SDK paths and agent instructions, and select the relevant workflow. |
+| [`aurora-qt-setup-project`](skills/qt/aurora-qt-setup-project/SKILL.md) | Create a Qt/QML application from Aurora OS ApplicationTemplate with qmake, CMake, or CMake + Conan. |
 | [`aurora-qt-build-project`](skills/qt/aurora-qt-build-project/SKILL.md) | Build an Aurora Qt project with `sfdk` and produce RPM packages. |
 | [`aurora-rpm-validate`](skills/rpm/aurora-rpm-validate/SKILL.md) | Validate an Aurora RPM against its security profile. |
 | [`aurora-rpm-sign`](skills/rpm/aurora-rpm-sign/SKILL.md) | Sign an Aurora RPM with a developer key and certificate. |
@@ -56,3 +67,9 @@ For installation across projects, use `~/.agents/skills/` as the destination ins
 The Flutter [checked dependency list](skills/flutter/aurora-flutter-add-dependency/scripts/checked-dependencies.yaml) is maintained manually next to its checker. It records package names without version pins; listed Aurora Pub packages are accepted by project policy.
 
 Generated projects store local SDK paths in Git-ignored `.aurora/sdk.json`. The Aurora Flutter SDK path is explicitly chosen; `sfdk` defaults to `~/AuroraOS/bin/sfdk` when available.
+
+The specialized skills reuse answers from the setup interview and also work directly. Qt builds, RPM signing, and RPM validation use the source project's recorded `sfdk` unless the user supplies another one. Flutter workflow-only setup records its SDK without generating platform files. An explicit Flutter SDK change uses the setup helper's `--existing --record-only --replace-sdk --flutter-sdk <new-root>` mode; other settings and application files are preserved.
+
+## Development checks
+
+Run `python3 -m unittest discover -s tests -v` to check Flutter setup handoffs, SDK replacement, destination protection, Conan scaffolding, and bootstrap failures. These tests use local fixtures and simulated SDK/download commands; they do not install an SDK or use the network.

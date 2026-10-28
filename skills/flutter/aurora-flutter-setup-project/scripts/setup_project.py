@@ -90,24 +90,27 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True, help="New project directory or existing Flutter project")
     parser.add_argument("--flutter-sdk", help="Aurora Flutter SDK root or bin/flutter path")
     parser.add_argument("--sfdk", help="Optional Qt SDK root or sfdk executable; defaults to ~/AuroraOS/bin/sfdk when installed")
-    parser.add_argument("--template", choices=TEMPLATES, default="app")
+    parser.add_argument("--template", choices=TEMPLATES, help="Defaults to app for new projects; inferred for existing projects")
     parser.add_argument("--org", default="ru.example")
     parser.add_argument("--project-name")
     parser.add_argument("--description")
     parser.add_argument("--existing", action="store_true", help="Add the Aurora platform to an existing Flutter project")
     parser.add_argument("--record-only", action="store_true", help="Only remember the SDK for an existing project")
+    parser.add_argument("--replace-sdk", action="store_true", help="Replace the recorded Flutter SDK with an explicitly supplied --flutter-sdk")
     parser.add_argument("--no-pub", action="store_true", help="Skip pub get during creation")
     args = parser.parse_args()
 
     output = args.output.expanduser().resolve()
     config = read_sdk_config(output)
+    if args.replace_sdk and not args.flutter_sdk:
+        fail("--replace-sdk requires --flutter-sdk")
     recorded_sdk = config.get("flutter")
     if recorded_sdk and args.flutter_sdk:
         supplied = Path(args.flutter_sdk).expanduser().resolve()
         supplied_root = supplied.parent.parent if supplied.name == "flutter" and supplied.is_file() else supplied
-        if supplied_root != Path(recorded_sdk).expanduser().resolve():
-            fail(f"Requested SDK conflicts with recorded SDK in {output / SDK_FILE}")
-    sdk_value = recorded_sdk or args.flutter_sdk
+        if supplied_root != Path(recorded_sdk).expanduser().resolve() and not args.replace_sdk:
+            fail(f"Requested SDK conflicts with recorded SDK in {output / SDK_FILE}; use --replace-sdk for an intentional change")
+    sdk_value = args.flutter_sdk if args.replace_sdk else recorded_sdk or args.flutter_sdk
     if not sdk_value:
         fail("Provide --flutter-sdk explicitly; no project Flutter SDK path was found")
     sdk, version = validate_sdk(sdk_value)
@@ -119,6 +122,8 @@ def main() -> None:
             fail(f"sfdk is not an executable file: {sfdk}")
     elif config.get("sfdk"):
         sfdk = Path(config["sfdk"])
+        if not sfdk.is_file() or not os.access(sfdk, os.X_OK):
+            fail(f"Recorded sfdk is not an executable file: {sfdk}")
     elif DEFAULT_SFDK.is_file() and os.access(DEFAULT_SFDK, os.X_OK):
         sfdk = DEFAULT_SFDK
     else:
@@ -129,8 +134,11 @@ def main() -> None:
     if args.existing or args.record_only:
         if not (output / "pubspec.yaml").is_file():
             fail(f"Not a Flutter project (pubspec.yaml missing): {output}")
-    elif output.exists() and any(output.iterdir()):
-        fail(f"Destination is not empty: {output}")
+    elif output.exists():
+        if not output.is_dir():
+            fail(f"Destination is not a directory: {output}")
+        if {entry.name for entry in output.iterdir()} - {".git"}:
+            fail(f"Destination is not empty: {output}; only an existing .git entry is allowed")
     if not re.fullmatch(r"[a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*)+", args.org):
         fail("--org must be a reverse-domain identifier such as ru.example")
     if args.project_name and not re.fullmatch(r"[a-z][a-z0-9_]*", args.project_name):
@@ -140,10 +148,14 @@ def main() -> None:
         command = [str(sdk / "bin" / "flutter"), "create", "--platforms=aurora"]
         if args.existing:
             pubspec = (output / "pubspec.yaml").read_text()
-            template = "plugin" if re.search(r"(?m)^[ \t]{2}plugin\s*:", pubspec) else "app"
+            is_plugin = bool(re.search(r"(?m)^[ \t]{2}plugin\s*:", pubspec))
+            template = args.template or ("plugin" if is_plugin else "app")
+            if (template != "app") != is_plugin:
+                fail("--template must match the existing project's app or plugin kind")
             command.append(f"--template={template}")
         else:
-            command.extend([f"--template={args.template}", f"--org={args.org}"])
+            template = args.template or "app"
+            command.extend([f"--template={template}", f"--org={args.org}"])
             if args.project_name:
                 command.append(f"--project-name={args.project_name}")
             if args.description:
@@ -158,7 +170,7 @@ def main() -> None:
     record_sdk(output, sdk, sfdk)
     print(json.dumps({"project": str(output), "flutter_sdk": str(sdk),
                       "flutter_version": version.get("flutterVersion"),
-                      "template": "existing" if args.existing else args.template,
+                      "template": "record-only" if args.record_only else template,
                       "sdk_file": str(output / SDK_FILE),
                       "sfdk": str(sfdk) if sfdk else None}, ensure_ascii=False))
 

@@ -6,8 +6,14 @@ Source: <https://hub.mos.ru/auroraos/demos/ApplicationTemplate>
 | --- | --- | --- | --- |
 | `qmake` | `example` | `<package-id>.pro` | `<package-id>.ts`, `<package-id>-ru.ts` |
 | `cmake` | `cmake-version` | `CMakeLists.txt` | `<app-name>-en.ts`, `<app-name>-ru.ts` |
+| `cmake --conan` | `cmake-version` + bundled Conan overlay | `CMakeLists.txt` | `<app-name>-en.ts`, `<app-name>-ru.ts` |
 
 There are no branches literally named `qmake` or `cmake`. The `dev` branch is a separate qmake development branch.
+
+The Conan option uses the same CMake source branch and adds the bundled
+`assets/conan/` files, adjusts RPM build/install macros, and preserves the
+application-private RPATH. It does not depend on a separate upstream Conan
+branch. Read [conan.md](conan.md) for that mode.
 
 Both branches contain `<package-id>.desktop`, `rpm/<package-id>.spec`, `qml/ApplicationTemplate.qml`, `src/main.cpp`, four package PNG icons, and `qml/icons/ApplicationTemplate.svg`. The build files, desktop entry, source, QML, translations, and `.gitignore` refer to the original identity. The translations also contain an upstream template description and the original BSD license text. Change the description, retain the license text and SPDX notices.
 

@@ -7,6 +7,10 @@ description: Build an existing Aurora OS Qt application with sfdk for an install
 
 Build an existing Qt application with the Aurora SDK command-line tool. Speak in the user's language. Use `scripts/build_project.py` for target discovery and the build; do not recreate its command sequence by hand. Run it with `--help` for arguments.
 
+Read the selected project's agent instructions and `.aurora/sdk.json`. Reuse any project, SDK, target, architecture, and requested checks already resolved by `setup-aurora-skills`; ask only about remaining ambiguity. This skill works directly too. Do not run onboarding as a prerequisite or build a project when only workflow configuration was requested. A Flutter app or plugin's native CMake directory is not a standalone Qt application; use the recorded Aurora Flutter SDK for its build workflow instead.
+
+For a Conan-enabled CMake project, keep its recipe, `rpm/version.config`, bootstrap, and `%conan_*` RPM macros intact. The normal `sfdk build` executes this integration; do not install host Conan or invoke Flutora as a prerequisite. Distribution and binary dependency downloads can require network access. After dependency changes, review the resulting private libraries, RPATH, and RPM requirements; a successful compile alone does not establish correct dependency packaging.
+
 ## Resolve the build request
 
 - Use a Qt SDK root or `sfdk` executable explicitly supplied by the user, otherwise the project's `.aurora/sdk.json` `sfdk` value, otherwise `~/AuroraOS/bin/sfdk`. If none exists, ask for the SDK path; the script may suggest a `PATH` match but does not silently choose it. A supplied `--sfdk` path updates the project record after validation.

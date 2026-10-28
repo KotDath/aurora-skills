@@ -19,6 +19,9 @@ from urllib.parse import urlparse
 TEMPLATE_URL = "https://hub.mos.ru/auroraos/demos/ApplicationTemplate.git"
 SOURCE_PACKAGE = "ru.auroraos.ApplicationTemplate"
 BRANCHES = {"qmake": "example", "cmake": "cmake-version"}
+CONAN_ASSETS = Path(__file__).resolve().parents[1] / "assets" / "conan"
+DEFAULT_CONAN_VERSION = "2.22.0"
+CONAN_FILES = ("conanfile.py", "rpm/load-conan.sh", "rpm/version.config", "rpm/LICENSE.conan.BSD-3-Clause.md")
 ICON_SIZES = ("86x86", "108x108", "128x128", "172x172")
 COMMON_FILES = (
     ".gitignore",
@@ -54,6 +57,8 @@ class SetupError(Exception):
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build-system", choices=BRANCHES, required=True)
+    parser.add_argument("--conan", action="store_true", help="Add Aurora Conan RPM integration to a CMake project")
+    parser.add_argument("--conan-version", help="Conan distribution version with --conan; default: 2.22.0")
     parser.add_argument("--organization", required=True, help="Reverse-domain ID, e.g. ru.example")
     parser.add_argument("--app-name", required=True, help="Code name, e.g. DotaCompanion")
     parser.add_argument("--output", type=Path, default=Path("."))
@@ -78,6 +83,14 @@ def one_line(value: str, label: str) -> str:
 
 
 def validate(args: argparse.Namespace) -> tuple[str, Path, dict[str, str]]:
+    if args.conan and args.build_system != "cmake":
+        raise SetupError("--conan requires --build-system cmake; qmake is not supported")
+    if args.conan_version and not args.conan:
+        raise SetupError("--conan-version requires --conan")
+    if args.conan:
+        args.conan_version = args.conan_version or DEFAULT_CONAN_VERSION
+        if not re.fullmatch(r"2\.[0-9]+\.[0-9]+", args.conan_version) or tuple(map(int, args.conan_version.split("."))) < (2, 22, 0):
+            raise SetupError("Conan distribution version must be 2.22.0 or a later Conan 2 release")
     org = one_line(args.organization, "organization")
     app = one_line(args.app_name, "app name")
     if not re.fullmatch(r"[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*)+", org):
@@ -243,11 +256,71 @@ def write_project(source: Path, stage: Path, build_system: str, values: dict[str
     (stage / "README.md").write_text(readme, encoding="utf-8")
 
 
-def check_project(stage: Path, build_system: str, values: dict[str, str]) -> None:
+def add_conan(stage: Path, values: dict[str, str], version: str) -> None:
+    """Overlay the external Conan distribution workflow used by Aurora RPM builds."""
+    for relative in CONAN_FILES:
+        source = CONAN_ASSETS / relative
+        if not source.is_file():
+            raise SetupError(f"bundled Conan asset is missing: {relative}")
+        destination = stage / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+    (stage / "rpm/version.config").write_text(f"conan_version={version}\n", encoding="utf-8")
+
+    spec_path = stage / "rpm" / f"{values['package']}.spec"
+    spec = spec_path.read_text(encoding="utf-8")
+    spec = (
+        "%define _cmake_skip_rpath %{nil}\n"
+        "%define __provides_exclude_from ^%{_datadir}/%{name}/lib/.*$\n"
+        "# The empty recipe needs no bundled-library Requires exclusions.\n"
+        "# Review the deployed library closure when adding dependencies.\n"
+        "%{expand:%(bash %{_sourcedir}/load-conan.sh)}\n\n" + spec
+    )
+    spec = replace_once(spec, "%build\n%cmake", "%build\n%conan_install\n%conan_cmake", "Conan CMake build phase")
+    spec = replace_once(spec, "%install\n%ninja_install", "%install\n%ninja_install\n%conan_deploy_libraries", "Conan deployment phase")
+    spec_path.write_text(spec, encoding="utf-8")
+
+    cmake_path = stage / "CMakeLists.txt"
+    cmake = cmake_path.read_text(encoding="utf-8")
+    # The upstream template must retain the application-private runtime search path.
+    for setting in ("set(CMAKE_SKIP_RPATH FALSE)", "set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)",
+                    'set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}/lib")'):
+        if setting not in cmake:
+            raise SetupError(f"upstream template changed: missing Conan runtime setting {setting}")
+    cmake += (
+        "\n# Conan PkgConfigDeps exposes dependencies through pkg-config.\n"
+        "# Add pkg_check_modules(... REQUIRED IMPORTED_TARGET ...) and link the\n"
+        "# corresponding PkgConfig:: target when adding a library to conanfile.py.\n"
+        "add_custom_target(conan_files SOURCES\n"
+        + "".join(f"    {relative}\n" for relative in CONAN_FILES)
+        + ")\n"
+    )
+    cmake_path.write_text(cmake, encoding="utf-8")
+    with (stage / "README.md").open("a", encoding="utf-8") as readme:
+        readme.write(
+            "\n## Conan\n\n"
+            f"Aurora Conan distribution: `{version}` (pinned in `rpm/version.config`). "
+            "The initial recipe has no external dependencies. RPM builds load "
+            "`rpm/load-conan.sh`, install dependencies, configure CMake, and deploy "
+            "needed libraries into the application's private `share/<package-id>/lib` directory. "
+            "The first build downloads the distribution when it is not cached. "
+            "No host Conan or Flutora installation is required.\n\n"
+            "When adding dependencies, update the recipe, pkg-config linking, and RPM "
+            "requirements for the actual deployed libraries together. Do not copy "
+            "another application's Requires exclusions.\n\n"
+            "The Conan bootstrap follows the Aurora OS wakeword example and "
+            "[official integration guide](https://developer.auroraos.ru/doc/extended/conan/conan_packages). "
+            "Its license is retained in `rpm/LICENSE.conan.BSD-3-Clause.md`.\n"
+        )
+
+
+def check_project(stage: Path, build_system: str, values: dict[str, str], conan: bool = False) -> None:
     package, app = values["package"], values["app"]
     expected = [mapped_path(path, values) for path in COMMON_FILES + BUILD_FILES[build_system]]
     expected += [Path(f"icons/{size}/{package}.png") for size in ICON_SIZES]
     expected.append(Path("README.md"))
+    if conan:
+        expected.extend(Path(relative) for relative in CONAN_FILES)
     for relative in expected:
         if not (stage / relative).is_file():
             raise SetupError(f"generated project is missing {relative}")
@@ -316,7 +389,9 @@ def main() -> int:
             with tempfile.TemporaryDirectory(prefix=".aurora-project-", dir=output.parent) as staging:
                 stage = Path(staging)
                 write_project(source, stage, args.build_system, values, branch, commit)
-                check_project(stage, args.build_system, values)
+                if args.conan:
+                    add_conan(stage, values, args.conan_version)
+                check_project(stage, args.build_system, values, conan=args.conan)
                 if sfdk:
                     record_sfdk(stage, sfdk)
                 publish(stage, output)
@@ -337,7 +412,7 @@ def main() -> int:
             )
             if getattr(args, key) is None
         }
-        print(json.dumps({"output": str(output), "package_id": values["package"], "build_system": args.build_system, "template_branch": branch, "template_commit": commit, "checks": "static checks passed", "defaults_used": defaults_used, "sfdk": str(sfdk) if sfdk else None, "sdk_config": str(output / '.aurora/sdk.json') if sfdk else None, "warnings": warnings}, ensure_ascii=False, indent=2))
+        print(json.dumps({"output": str(output), "package_id": values["package"], "build_system": args.build_system, "conan": args.conan, "conan_version": args.conan_version, "template_branch": branch, "template_commit": commit, "checks": "static checks passed", "defaults_used": defaults_used, "sfdk": str(sfdk) if sfdk else None, "sdk_config": str(output / '.aurora/sdk.json') if sfdk else None, "warnings": warnings}, ensure_ascii=False, indent=2))
         return 0
     except (SetupError, subprocess.CalledProcessError, OSError) as error:
         print(f"setup-project: {error}", file=sys.stderr)

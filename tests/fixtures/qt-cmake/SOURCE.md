@@ -1,0 +1,1 @@
+Fixtures from https://hub.mos.ru/auroraos/demos/ApplicationTemplate, branch `cmake-version`, commit `42c37ff2c8f8649a33b7f37fff72308521e2a3d1`. Original BSD-3-Clause license retained alongside the fixtures.

@@ -7,11 +7,13 @@ description: Sign an existing Aurora OS RPM package with a developer key and cer
 
 Sign the exact `.rpm` chosen by the user with `rpmsign-external`. Work from the package path, regardless of the framework that produced it. Speak in the user's language.
 
+Reuse the source project, SDK, package outputs, and signing choices already resolved in the current workflow or `setup-aurora-skills`. A build-only or onboarding request does not authorize signing. This skill works directly without onboarding.
+
 ## Select artifact and credentials
 
 Use a supplied RPM path or the exact artifact(s) produced by the current build workflow. Ask which one only when several unrelated versions or architectures remain plausible. Use key and certificate paths supplied by the user. For a development build, use `~/AuroraOS/package-signing/regular_key.pem` and `regular_cert.pem` when both exist and no other credentials were specified; these are public Regular development credentials. Do not choose them for a release request: use the user's personal key and certificate, or ask for their paths if missing. Keep key material outside the project and never display or copy private key contents. Let the signing tool prompt for an encrypted key's passphrase; do not put it in a command, log, or chat.
 
-Find `rpmsign-external` on the host or through Aurora SDK Build Engine (`sfdk engine exec rpmsign-external`). For the latter, use the user's `sfdk` path or `~/AuroraOS/bin/sfdk`; ask for a path if the default is missing. Run `sfdk` from a directory inside its shared workspace. The RPM and credential files must be visible there too. Do not move credentials into that workspace without a user instruction.
+Find `rpmsign-external` on the host or through Aurora SDK Build Engine (`sfdk engine exec rpmsign-external`). For the latter, use the user's explicit `sfdk`, otherwise the known source project's `.aurora/sdk.json` `sfdk` value, otherwise `~/AuroraOS/bin/sfdk`. If the record is malformed or its executable is invalid, report it instead of silently selecting another SDK; ask for a path when none is available. The RPM can live in a sibling build directory, so use the source project established by the workflow rather than assuming the RPM's parent is the project root. Run `sfdk` from a directory inside its shared workspace. The RPM and credential files must be visible there too. Do not move credentials into that workspace without a user instruction.
 
 ## Handle an existing signature
 
