@@ -1,0 +1,3 @@
+interface:
+  display_name: "Install Aurora SDK"
+  short_description: "Check Linux and download the Aurora SDK installer"

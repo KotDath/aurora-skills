@@ -1,0 +1,3 @@
+interface:
+  display_name: "Install Aurora Platform SDK"
+  short_description: "Install PSDK with the official setup script on Linux"

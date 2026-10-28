@@ -36,7 +36,7 @@ def project_sdk_config(project: Path) -> dict:
             or not config[key].strip()
             or not Path(config[key]).is_absolute()
         )
-        for key in ("flutter", "sfdk")
+        for key in ("flutter", "sfdk", "psdk")
     ):
         raise BuildError(f"Invalid SDK paths in {path}")
     return config

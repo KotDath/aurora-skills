@@ -49,6 +49,8 @@ Ask your agent to use `setup-aurora-skills`, for example: “Help me set up an A
 
 The setup records local SDKs in Git-ignored `.aurora/sdk.json` and adds a short project workflow section to `AGENTS.md` (or the project's existing `CLAUDE.md`). It then uses the relevant installed skills for the requested creation or build. Install those skills too when needed; the interview skill does not silently install the collection. Rerunning setup reuses prior answers and updates the chosen settings without regenerating the app.
 
+When a required tool is not found in the checked locations, setup offers an existing path, installation, or continuing with the tool pending when possible. Desktop SDK and PSDK are independent: setup selects only the tool needed for the requested operation. `aurora-install-sdk` checks Linux prerequisites, asks for release and BT/MB2, and downloads the official installer; the user completes graphical installation, then the agent verifies it. `aurora-install-psdk` installs PSDK using only the official setup script and verifies its chroot tooling and targets. Both also work directly without a project interview. Docker, when required by the workflow, is checked; the user installs or fixes it. These skills do not install the Aurora Flutter fork.
+
 CMake + Conan uses the Qt generator's `--build-system cmake --conan` mode: an empty recipe, a pinned Aurora Conan distribution, and RPM build/deployment integration. It does not add libraries implicitly. Creating an Aurora platform skeleton for an upstream Flutter plugin does not complete its port; remaining work is reported separately. Direct use of any specialized skill remains supported without running the interview first.
 
 ## Skills
@@ -56,6 +58,8 @@ CMake + Conan uses the Qt generator's `--build-system cmake --conan` mode: an em
 | Skill | Purpose |
 | --- | --- |
 | [`setup-aurora-skills`](skills/setup/setup-aurora-skills/SKILL.md) | Interview the user, identify the project type, configure SDK paths and agent instructions, and select the relevant workflow. |
+| [`aurora-install-sdk`](skills/setup/aurora-install-sdk/SKILL.md) | Check Linux, download the selected BT/MB2 installer, guide user installation, and verify the SDK. |
+| [`aurora-install-psdk`](skills/setup/aurora-install-psdk/SKILL.md) | Install independent PSDK with the official script and verify its tooling and targets. |
 | [`aurora-qt-setup-project`](skills/qt/aurora-qt-setup-project/SKILL.md) | Create a Qt/QML application from Aurora OS ApplicationTemplate with qmake, CMake, or CMake + Conan. |
 | [`aurora-qt-build-project`](skills/qt/aurora-qt-build-project/SKILL.md) | Build an Aurora Qt project with `sfdk` and produce RPM packages. |
 | [`aurora-rpm-validate`](skills/rpm/aurora-rpm-validate/SKILL.md) | Validate an Aurora RPM against its security profile. |
@@ -67,6 +71,8 @@ CMake + Conan uses the Qt generator's `--build-system cmake --conan` mode: an em
 The Flutter [checked dependency list](skills/flutter/aurora-flutter-add-dependency/scripts/checked-dependencies.yaml) is maintained manually next to its checker. It records package names without version pins; listed Aurora Pub packages are accepted by project policy.
 
 Generated projects store local SDK paths in Git-ignored `.aurora/sdk.json`. The Aurora Flutter SDK path is explicitly chosen; `sfdk` defaults to `~/AuroraOS/bin/sfdk` when available.
+
+The optional `psdk` field records a selected PSDK root containing `sdk-chroot`, not the outer installation directory. It is independent of `sfdk` and `flutter`; configuring one does not require installing the others. The bundled Qt build helper uses `sfdk`, not PSDK.
 
 The specialized skills reuse answers from the setup interview and also work directly. Qt builds, RPM signing, and RPM validation use the source project's recorded `sfdk` unless the user supplies another one. Flutter workflow-only setup records its SDK without generating platform files. An explicit Flutter SDK change uses the setup helper's `--existing --record-only --replace-sdk --flutter-sdk <new-root>` mode; other settings and application files are preserved.
 

@@ -36,7 +36,7 @@ def read_sdk_config(project: Path) -> dict:
                 or not config[key].strip()
                 or not Path(config[key]).is_absolute()
             )
-            for key in ("flutter", "sfdk")
+            for key in ("flutter", "sfdk", "psdk")
         ):
             fail(f"Invalid SDK paths in {config_path}")
     if legacy_path.is_file():

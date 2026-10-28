@@ -78,13 +78,14 @@ class FlutterSetupTests(unittest.TestCase):
         return [command for command in self.commands if command[1] == "create"]
 
     def test_record_only_preserves_application_and_other_settings(self):
-        config = self.write_config(sfdk=str(self.sfdk), custom={"keep": True})
+        psdk = str(self.root / "independent_psdk")
+        config = self.write_config(sfdk=str(self.sfdk), psdk=psdk, custom={"keep": True})
         pubspec = (self.project / "pubspec.yaml").read_bytes()
         main = (self.project / "lib/main.dart").read_bytes()
         (self.project / ".gitignore").write_text("build/\n")
         result = self.run_setup("--existing", "--record-only", "--flutter-sdk", self.sdk)
         data = json.loads(config.read_text())
-        self.assertEqual(data, {"flutter": str(self.sdk), "sfdk": str(self.sfdk), "custom": {"keep": True}})
+        self.assertEqual(data, {"flutter": str(self.sdk), "sfdk": str(self.sfdk), "psdk": psdk, "custom": {"keep": True}})
         self.assertEqual((self.project / "pubspec.yaml").read_bytes(), pubspec)
         self.assertEqual((self.project / "lib/main.dart").read_bytes(), main)
         self.assertFalse((self.project / "aurora").exists())
