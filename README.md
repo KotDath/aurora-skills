@@ -13,15 +13,15 @@ Agent skills for developing applications for Aurora OS, plus a utility skill for
 Start with the interview from your project directory:
 
 ```bash
-npx skills add KotDath/aurora-skills --skill setup-aurora-skills
+npx skills add KotDath/aurora-skills --skill setup-aurora-skills --copy
 ```
 
-The interview proposes the relevant skills and resolves the agent and local/global scope. Install only the agreed selection. Add `--agent opencode` for OpenCode, `--global` for an explicitly chosen global installation, or `--copy` for copies instead of links.
+The interview proposes the relevant skills and resolves the agent and local/global scope. Install only the agreed selection. Add `--agent opencode` for OpenCode, `--global` for an explicitly chosen global installation, and keep `--copy` to install independent copies instead of symbolic links. Copies are the default recommendation: removing or changing the source checkout must not break an installed skill.
 
 For development, install `aurora-platform-context` alongside the selected development skill. Installing the whole collection remains an explicit alternative:
 
 ```bash
-npx skills add KotDath/aurora-skills --agent opencode --skill '*'
+npx skills add KotDath/aurora-skills --agent opencode --skill '*' --copy
 ```
 
 ### By copying files
@@ -87,4 +87,4 @@ The specialized skills reuse answers from the setup interview and also work dire
 
 ## Development checks
 
-Run `python3 -m unittest discover -s tests -v` to check Flutter setup handoffs, SDK replacement, destination protection, Conan scaffolding, and bootstrap failures. These tests use local fixtures and simulated SDK/download commands; they do not install an SDK or use the network.
+Run `uv run --with 'PyYAML>=6,<7' python -m unittest discover -s tests -v` to check Flutter setup handoffs, SDK replacement, destination protection, Conan scaffolding, and bootstrap failures. Alternatively, run `python3 -m unittest discover -s tests -v` in an environment with PyYAML installed. The tests use local fixtures and simulated SDK/download commands; they do not install an SDK or use the network. Preparing the Python environment may download PyYAML.

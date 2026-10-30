@@ -25,6 +25,8 @@ Run `python3 <this-skill-directory>/scripts/check_dependency.py --package <name>
 
 The checker distinguishes `available_on_aurora_server`, `needs_source_review` (HTTP 404), and `server_check_failed` (network, HTTP or metadata error). `allowed: null` means unknown, not allowed or absent. Retry or report the unavailable check instead of treating an outage as a missing port. Inspect the chosen version's SDK constraints and archive origin before adding it.
 
+Compatibility includes the selected transitive versions, especially an endorsed plugin's backend. An older frontend is not a workaround for an older SDK if it still resolves to a backend with the same higher SDK requirement. Without an actual compatible resolution, report server admission separately from SDK compatibility and leave the latter pending.
+
 The adjacent [checked-dependencies.yaml](scripts/checked-dependencies.yaml) is historical context only. `--offline` reports membership without granting admission; neither list section replaces a live server check or source review for the selected version. The helper does not download source archives, audit code, resolve dependencies or edit the project.
 
 Use the main app-facing package from the Aurora server when that is its distribution model; let the selected fork resolve its backend. Do not replace a requested package with a platform interface or add a random implementation merely to work around admission. If the accepted server package's own instructions require an implementation dependency, apply the same policy to that dependency. Generic federation rules do not override this admission policy. If server availability cannot be established, report the uncertainty; a network error does not establish that a port is absent.

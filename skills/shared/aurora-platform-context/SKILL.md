@@ -11,4 +11,6 @@ For Flutter native behavior, wrapper APIs or plugin lifecycle, also read [Flutte
 
 Return the relevant versioned evidence to the calling development skill and continue the user's task. Do not repeat onboarding or load unrelated stack guidance. Project-specific implementation practices stay in the selected development skill; dependency admission belongs to `aurora-flutter-add-dependency`.
 
+For reviews, distinguish a demonstrated defect in the supplied code from an integration check that needs files not supplied. A snippet without `main`, registration, a desktop file or build rules does not prove that the complete project lacks them. Cite the inspected file/symbol and conditions for each finding; do not claim a compile/runtime failure was reproduced when only source or documentation was inspected. Stop researching once the relevant contract is established; leave unavailable evidence explicit instead of repeatedly searching unrelated examples.
+
 Resolve this skill by name from the selected agent's inventory, preferring the project-local copy unless the user selected otherwise. Installers may flatten directories: other skills must not assume a sibling relative filesystem path. If this skill is unavailable, report the missing shared policy and offer its installation in the user's chosen scope; do not invent a local replacement policy.

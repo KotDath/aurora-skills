@@ -98,6 +98,8 @@ Bad: `catch (_) { return; }` around a save operation makes failure look like suc
 
 ## App lifecycle is not widget disposal
 
+Minimizing or hiding an application does not by itself dispose its widgets. A delayed `setState` becomes invalid when its owning `State` is unmounted; discuss that separately from application visibility and background execution.
+
 Use the selected Flutter version's `WidgetsBindingObserver` or `AppLifecycleListener` for application transitions; remove listeners when their owner ends. Do not use Android-only `reassemble()` camera workarounds as Aurora background handling: reassemble is a development hot-reload hook.
 
 In the inspected embedder source revision labeled 3.41.4, `lifecycle_plugin.cc` maps minimized windows to `inactive`, hidden windows to `hidden`, and ordinary visible windows to `resumed`. This is source evidence for that revision, not a guarantee of installed-device behavior or all synthesized Dart transitions. Code that releases a camera **only** on `paused` needs a target-specific review. Decide which inactive/hidden states should pause the feature, and re-check capability/permissions when resuming; media/background use cases may have different requirements.

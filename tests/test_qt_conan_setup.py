@@ -24,6 +24,15 @@ setup = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(setup)
 
 
+class GitTimeoutTests(unittest.TestCase):
+    def test_template_timeout_is_reported_without_publishing(self):
+        with patch.object(setup.subprocess, "run", side_effect=subprocess.TimeoutExpired("git", 90)) as run:
+            with self.assertRaisesRegex(setup.SetupError, "timed out.*No scaffold was published"):
+                setup.git_output("git", "clone", "unreachable", "destination")
+        self.assertEqual(run.call_args.kwargs["timeout"], 90)
+        self.assertEqual(run.call_args.kwargs["env"]["GIT_TERMINAL_PROMPT"], "0")
+
+
 class ConanScaffoldTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory(prefix="aurora-conan-test-")

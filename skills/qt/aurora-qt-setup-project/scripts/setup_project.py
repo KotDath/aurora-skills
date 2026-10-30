@@ -134,7 +134,11 @@ def validate(args: argparse.Namespace) -> tuple[str, Path, dict[str, str]]:
 
 
 def git_output(*command: str) -> str:
-    result = subprocess.run(command, check=True, text=True, capture_output=True)
+    try:
+        result = subprocess.run(command, check=True, text=True, capture_output=True,
+                                timeout=90, env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
+    except subprocess.TimeoutExpired as exc:
+        raise SetupError("Git operation timed out after 90 seconds; check template access or provide a verified local checkout with --template-dir. No scaffold was published.") from exc
     return result.stdout.strip()
 
 

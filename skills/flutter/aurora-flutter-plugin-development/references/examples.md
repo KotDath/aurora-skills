@@ -95,3 +95,7 @@ String consumeLabel(Pointer<Char> pointer) {
 `bindings` is the selected generated library binding, not a Flutter API. The code assumes the pointer came from that library's matching allocator and is consumed exactly once. Do not use Dart `calloc.free` as a universal deallocator. Generate binding widths from the C declaration and target ABI; verify exported symbols and the library bundled in the RPM.
 
 The C++ fragment was compiled and exercised on the host with Cyrillic/emoji, empty input, null input and matching frees under AddressSanitizer. Allocation-failure injection and the Dart/generated-binding path were not tested. Host testing establishes neither target ABI nor Aurora service permissions.
+
+## Review expression lifetimes precisely
+
+`strcpy(destination, text.toUtf8().constData())` keeps the temporary `QByteArray` alive until the full expression ends; the call itself is not a use-after-free. Saving that pointer and using it in a later statement is a different case. Check allocation size and allocator pairing independently. `extern "C"` establishes C linkage; exported symbol visibility still depends on build flags, so an unseen build configuration is an open check rather than proof of a missing export.

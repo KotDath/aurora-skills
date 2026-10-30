@@ -10,6 +10,8 @@
 
 An empty Flutter directory has no `pubspec.yaml`: do not use `--existing --record-only` there. For workflow-only setup, defer the Flutter SDK record until the Flutter project exists rather than generating an app implicitly; record the pending state in the agreed workflow instructions.
 
+Skill installation scope and project metadata are separate choices. Global skills do not keep the destination empty when `AGENTS.md`, `.aurora/` or a project MCP configuration is written there. Explain that consequence for either scope; do not recommend global installation as a workaround for generator destination checks.
+
 ## 1. Explore before interviewing
 
 Read the request and conversation first. Inspect the intended project directory: applicable `AGENTS.md` or `CLAUDE.md`, `.aurora/sdk.json`, build files, `pubspec.yaml`, and Aurora platform and RPM files. For a monorepo, identify the relevant subproject rather than treating unrelated components as one application.
@@ -34,7 +36,9 @@ Work through these decisions as needed:
 
 For development workflows, include the matching development skill from [selection](selection.md); it carries platform knowledge and source priorities. A scaffold-only or build-only request does not require loading development references.
 
-Show a compact card of the resolved project type, destination, identity, SDKs, requested action, and relevant skills. Clarify unresolved or conflicting values. Once the user has supplied the needed choices and requested the action, proceed without an additional approval round. In explicitly autonomous mode, use established project facts and the selected skill's defaults, disclose assumptions, and ask only for information that cannot safely be inferred, such as a missing Flutter SDK path or an ambiguous target project.
+Base Qt compatibility and build-system advice on the target Aurora SDK and template, not the host's Qt or CMake version. A host Qt 6 installation does not establish Qt 6 support in the selected Aurora target. Honor an explicit build-system choice; otherwise use the Qt setup skill's documented recommendation.
+
+Show a compact card of the resolved project type, destination, identity, SDKs, requested action, and relevant skills. Clarify unresolved or conflicting values. Once the user has approved the concrete skill selection and scope and requested the action, proceed without an additional approval round. Answers about stack or scope alone do not approve an unseen list. In explicitly autonomous mode, use established project facts and the selected skill's defaults, disclose assumptions, and ask only for information that cannot safely be inferred, such as a missing Flutter SDK path or an ambiguous target project.
 
 On rerun, show the existing setup and ask only what remains unknown or what the user wants changed. A request to change the setup is not permission to regenerate the application or switch its build system.
 

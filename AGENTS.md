@@ -11,7 +11,7 @@ Reuse known answers and recommend the skills needed for the requested workflow. 
 To install the interview skill:
 
 ```bash
-npx skills add KotDath/aurora-skills --skill setup-aurora-skills
+npx skills add KotDath/aurora-skills --skill setup-aurora-skills --copy
 ```
 
 For additional skills, replace the name with a selection from the table. Use the user's chosen agent and installation scope; see [README.md](README.md) or [README.ru.md](README.ru.md) for installation options. Read each selected skill's `SKILL.md` before using it. Copy the whole skill directory when installing manually so supporting files remain available.

@@ -83,6 +83,7 @@ def main() -> None:
                 report.update(allowed=False, status="needs_source_review")
             else:
                 report.update(status="server_check_failed", error=f"HTTP {exc.code}")
+            exc.close()
         except (URLError, OSError, ValueError) as exc:
             report.update(status="server_check_failed", error=type(exc).__name__)
     if report["status"] == "needs_source_review":

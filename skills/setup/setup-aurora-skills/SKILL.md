@@ -19,7 +19,7 @@ Read [toolchains](references/toolchains.md) when checking the selected workflow'
 
 Read [selection](references/selection.md) to propose exact skills and purposes, including the shared source policy for development. Resolve target agent and project-local/global scope; recommend project-local for a project. Show a compact card with project type, destination, requested action, tools, skill selection/scope and pending items.
 
-Install only the agreed missing skills after confirmation; reuse authorization already given for that exact selection and scope. Inspect actual discovery after installation. Installation completion does not authorize scaffolding, building or signing. A workflow-only request remains workflow-only.
+Install only the agreed missing skills after confirmation; reuse authorization already given for that exact selection and scope. Choosing “local”, a stack, or an SDK does not approve a skill list that has not been shown. Put the concrete names and purposes in the installation question itself, or show the resolved list afterward and wait for agreement. An explicit request to choose and install autonomously authorizes selection without this extra question. Inspect actual discovery after installation. Installation completion does not authorize scaffolding, building or signing. A workflow-only request remains workflow-only.
 
 ## Perform and record
 
