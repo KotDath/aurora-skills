@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["PyYAML>=6.0,<7"]
+# ///
 """Create an Aurora Flutter app/plugin and remember the local Flutter SDK path."""
 
 from __future__ import annotations
@@ -13,12 +17,32 @@ from pathlib import Path
 
 SDK_FILE = Path(".aurora/sdk.json")
 LEGACY_SDK_FILE = ".aurora-flutter-sdk"
-DEFAULT_SFDK = Path.home() / "AuroraOS" / "bin" / "sfdk"
 TEMPLATES = ("app", "plugin", "plugin_qt", "plugin_ffi")
 
 
 def fail(message: str) -> None:
     raise SystemExit(message)
+
+
+def project_is_plugin(pubspec_path: Path) -> bool:
+    try:
+        import yaml
+    except ImportError:
+        fail("Reading pubspec.yaml requires PyYAML. Use 'uv run <script> ...' or a Python environment with PyYAML installed.")
+    try:
+        pubspec = yaml.safe_load(pubspec_path.read_text())
+    except yaml.YAMLError as exc:
+        fail(f"Invalid YAML in {pubspec_path}: {exc}")
+    if not isinstance(pubspec, dict):
+        fail(f"Expected a YAML mapping in {pubspec_path}")
+    flutter = pubspec.get("flutter", {})
+    if not isinstance(flutter, dict):
+        fail(f"Expected a flutter mapping in {pubspec_path}")
+    if "plugin" not in flutter:
+        return False
+    if not isinstance(flutter["plugin"], dict):
+        fail(f"Expected a flutter.plugin mapping in {pubspec_path}")
+    return True
 
 
 def read_sdk_config(project: Path) -> dict:
@@ -65,13 +89,11 @@ def validate_sdk(value: str) -> tuple[Path, dict]:
     return sdk, version
 
 
-def record_sdk(project: Path, sdk: Path, sfdk: Path | None) -> None:
+def record_sdk(project: Path, sdk: Path) -> None:
     config_path = project / SDK_FILE
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config = json.loads(config_path.read_text()) if config_path.is_file() else {}
     config["flutter"] = str(sdk)
-    if sfdk:
-        config["sfdk"] = str(sfdk)
     config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n")
     legacy_path = project / LEGACY_SDK_FILE
     if legacy_path.is_file():
@@ -89,7 +111,6 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True, help="New project directory or existing Flutter project")
     parser.add_argument("--flutter-sdk", help="Aurora Flutter SDK root or bin/flutter path")
-    parser.add_argument("--sfdk", help="Optional Qt SDK root or sfdk executable; defaults to ~/AuroraOS/bin/sfdk when installed")
     parser.add_argument("--template", choices=TEMPLATES, help="Defaults to app for new projects; inferred for existing projects")
     parser.add_argument("--org", default="ru.example")
     parser.add_argument("--project-name")
@@ -114,20 +135,6 @@ def main() -> None:
     if not sdk_value:
         fail("Provide --flutter-sdk explicitly; no project Flutter SDK path was found")
     sdk, version = validate_sdk(sdk_value)
-    if args.sfdk:
-        sfdk = Path(args.sfdk).expanduser().resolve()
-        if sfdk.is_dir():
-            sfdk = sfdk / "bin" / "sfdk"
-        if not sfdk.is_file() or not os.access(sfdk, os.X_OK):
-            fail(f"sfdk is not an executable file: {sfdk}")
-    elif config.get("sfdk"):
-        sfdk = Path(config["sfdk"])
-        if not sfdk.is_file() or not os.access(sfdk, os.X_OK):
-            fail(f"Recorded sfdk is not an executable file: {sfdk}")
-    elif DEFAULT_SFDK.is_file() and os.access(DEFAULT_SFDK, os.X_OK):
-        sfdk = DEFAULT_SFDK
-    else:
-        sfdk = None
 
     if args.record_only and not args.existing:
         fail("--record-only requires --existing")
@@ -147,8 +154,7 @@ def main() -> None:
     if not args.record_only:
         command = [str(sdk / "bin" / "flutter"), "create", "--platforms=aurora"]
         if args.existing:
-            pubspec = (output / "pubspec.yaml").read_text()
-            is_plugin = bool(re.search(r"(?m)^[ \t]{2}plugin\s*:", pubspec))
+            is_plugin = project_is_plugin(output / "pubspec.yaml")
             template = args.template or ("plugin" if is_plugin else "app")
             if (template != "app") != is_plugin:
                 fail("--template must match the existing project's app or plugin kind")
@@ -167,12 +173,11 @@ def main() -> None:
         if result.returncode:
             fail(f"Aurora Flutter create failed with exit code {result.returncode}")
 
-    record_sdk(output, sdk, sfdk)
+    record_sdk(output, sdk)
     print(json.dumps({"project": str(output), "flutter_sdk": str(sdk),
                       "flutter_version": version.get("flutterVersion"),
                       "template": "record-only" if args.record_only else template,
-                      "sdk_file": str(output / SDK_FILE),
-                      "sfdk": str(sfdk) if sfdk else None}, ensure_ascii=False))
+                      "sdk_file": str(output / SDK_FILE)}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

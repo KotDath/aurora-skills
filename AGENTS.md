@@ -29,4 +29,8 @@ For additional skills, replace the name with a selection from the table. Use the
 | [`aurora-flutter-add-dependency`](skills/flutter/aurora-flutter-add-dependency/SKILL.md) | Check a Flutter package against the curated allowlist and add an allowed dependency. |
 | [`aurora-rpm-sign`](skills/rpm/aurora-rpm-sign/SKILL.md) | Sign an existing RPM with the user's developer key and certificate. |
 | [`aurora-rpm-validate`](skills/rpm/aurora-rpm-validate/SKILL.md) | Validate an existing RPM against its security profile and explain the results. |
+| [`aurora-platform-context`](skills/shared/aurora-platform-context/SKILL.md) | Shared source policy, official MCP, SDK/PSDK evidence and matching Flutter embedder sources. |
+| [`aurora-qt-development`](skills/qt/aurora-qt-development/SKILL.md) | Implement and review Aurora Qt/QML application code with platform practices and versioned sources. |
+| [`aurora-flutter-app-development`](skills/flutter/aurora-flutter-app-development/SKILL.md) | Develop and port Aurora Flutter applications with platform compatibility and lifecycle guidance. |
+| [`aurora-flutter-plugin-development`](skills/flutter/aurora-flutter-plugin-development/SKILL.md) | Implement and port Aurora Flutter plugins using channels, Qt or FFI and matching embedder sources. |
 | [`report-issue`](skills/util/report-issue/SKILL.md) | Prepare an issue ZIP containing the current agent session and descendant subagent sessions. |

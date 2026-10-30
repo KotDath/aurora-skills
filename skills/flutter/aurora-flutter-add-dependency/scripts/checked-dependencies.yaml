@@ -1,8 +1,10 @@
-# Manually maintained allowlist. The checker reads this file and never edits it.
+# Manually maintained historical package list. The checker never edits it.
 # Federated platform interfaces and platform implementations are intentionally omitted.
 # This list is for direct dependencies, not every package in Aurora Pub.
-# Listed Aurora Pub packages are accepted by project policy.
-# Other names passed source review of a resolved dependency closure with Aurora Flutter 3.41.4.
+# Verify current Aurora server presence before granting admission.
+# Other names are historical source-review notes with Aurora Flutter 3.41.4.
+# Recheck their selected version/closure for native code and TargetPlatform;
+# this section does not automatically grant admission.
 # Names are intentionally unpinned.
 aurora_pub:
 - _fe_analyzer_shared

@@ -10,22 +10,19 @@ Agent skills for developing applications for Aurora OS, plus a utility skill for
 
 ### With `npx skills`
 
-Run the command from the project where you want the skills. To install **all skills for all supported agents** without prompts:
+Start with the interview from your project directory:
 
 ```bash
-npx skills add KotDath/aurora-skills --all
-```
-
-To install all skills while choosing the target agents interactively, or to install one specific skill:
-
-```bash
-npx skills add KotDath/aurora-skills --skill '*'
 npx skills add KotDath/aurora-skills --skill setup-aurora-skills
 ```
 
-Replace `setup-aurora-skills` with any name from the table below. Add `--copy` to copy files instead of creating links, or `--global` to install for your user across projects.
+The interview proposes the relevant skills and resolves the agent and local/global scope. Install only the agreed selection. Add `--agent opencode` for OpenCode, `--global` for an explicitly chosen global installation, or `--copy` for copies instead of links.
 
-For OpenCode only, install the complete set with `npx skills add KotDath/aurora-skills --agent opencode --skill '*'`. The shared setup can then load the appropriate specialized skills without a second installation step.
+For development, install `aurora-platform-context` alongside the selected development skill. Installing the whole collection remains an explicit alternative:
+
+```bash
+npx skills add KotDath/aurora-skills --agent opencode --skill '*'
+```
 
 ### By copying files
 
@@ -55,6 +52,12 @@ When a required tool is not found in the checked locations, setup offers an exis
 
 CMake + Conan uses the Qt generator's `--build-system cmake --conan` mode: an empty recipe, a pinned Aurora Conan distribution, and RPM build/deployment integration. It does not add libraries implicitly. Creating an Aurora platform skeleton for an upstream Flutter plugin does not complete its port; remaining work is reported separately. Direct use of any specialized skill remains supported without running the interview first.
 
+## Development knowledge stays in skills
+
+Select `aurora-qt-development`, `aurora-flutter-app-development`, or `aurora-flutter-plugin-development` for the project's code work. Each includes stack-specific practices and good/bad examples in its own `references/`. Install the shared `aurora-platform-context` skill alongside it; source/MCP/embedder policy is maintained there once. Onboarding references the selected skill from `AGENTS.md`; it does not generate a project documentation tree.
+
+The official documentation MCP is `https://developer.auroraos.ru/api/mcp`. Development skills combine versioned official documentation with the selected SDK/PSDK headers and official Mos.Hub examples. Flutter skills can retrieve matching [Aurora Embedder sources](https://hub.mos.ru/auroraos/flutter/aurora-embedder) for native behavior; a current default branch is not evidence for an older installed SDK. Local skill versions take precedence over global copies unless explicitly selected otherwise.
+
 ## Skills
 
 | Skill | Purpose |
@@ -68,11 +71,15 @@ CMake + Conan uses the Qt generator's `--build-system cmake --conan` mode: an em
 | [`aurora-rpm-sign`](skills/rpm/aurora-rpm-sign/SKILL.md) | Sign an Aurora RPM with a developer key and certificate. |
 | [`aurora-flutter-setup-project`](skills/flutter/aurora-flutter-setup-project/SKILL.md) | Create an Aurora Flutter app or plugin, or add Aurora support to an existing project. |
 | [`aurora-flutter-add-dependency`](skills/flutter/aurora-flutter-add-dependency/SKILL.md) | Check a dependency against the curated list and add it with Aurora Flutter. |
+| [`aurora-platform-context`](skills/shared/aurora-platform-context/SKILL.md) | Shared source policy, official MCP, SDK/PSDK evidence and matching Flutter embedder sources. |
+| [`aurora-qt-development`](skills/qt/aurora-qt-development/SKILL.md) | Implement and review Aurora Qt/QML application code with platform practices and versioned sources. |
+| [`aurora-flutter-app-development`](skills/flutter/aurora-flutter-app-development/SKILL.md) | Develop and port Aurora Flutter applications with platform compatibility and lifecycle guidance. |
+| [`aurora-flutter-plugin-development`](skills/flutter/aurora-flutter-plugin-development/SKILL.md) | Implement and port Aurora Flutter plugins using channels, Qt or FFI and matching embedder sources. |
 | [`report-issue`](skills/util/report-issue/SKILL.md) | Collect an issue ZIP with the current agent session and descendant subagent sessions. |
 
-The Flutter [checked dependency list](skills/flutter/aurora-flutter-add-dependency/scripts/checked-dependencies.yaml) is maintained manually next to its checker. It records package names without version pins; listed Aurora Pub packages are accepted by project policy.
+The Flutter [checked dependency list](skills/flutter/aurora-flutter-add-dependency/scripts/checked-dependencies.yaml) is maintained manually next to its checker. It is historical context. Admission uses the live Aurora server at `https://sdk-repo.omprussia.ru/sdk/flutter/pub/api/packages/<name>`; absent packages require source review of the selected version and dependencies with no native code or `TargetPlatform`.
 
-Generated projects store local SDK paths in Git-ignored `.aurora/sdk.json`. The Aurora Flutter SDK path is explicitly chosen; `sfdk` defaults to `~/AuroraOS/bin/sfdk` when available.
+Generated projects store local SDK paths in Git-ignored `.aurora/sdk.json`. Flutter setup records only the explicitly selected Aurora Flutter SDK and does not discover or invoke sfdk. Qt setup can use `~/AuroraOS/bin/sfdk` as its fallback.
 
 The optional `psdk` field records a selected PSDK root containing `sdk-chroot`, not the outer installation directory. It is independent of `sfdk` and `flutter`; configuring one does not require installing the others. The bundled Qt build helper uses `sfdk`, not PSDK.
 

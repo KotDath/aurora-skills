@@ -1,20 +1,38 @@
 ---
 name: aurora-flutter-add-dependency
-description: Check a Flutter dependency against the manually maintained Aurora allowlist, then add an allowed package to an Aurora Flutter project when requested.
+description: Decide whether a dependency is allowed for an Aurora Flutter project and add it when requested. Use for package selection, compatibility review and dependency additions; not for porting a rejected native plugin.
 ---
 
 # Add an Aurora Flutter dependency
 
-Read the project's agent instructions and reuse the project and SDK selected during `setup-aurora-skills`, if onboarding was used. This skill also works directly. Onboarding or scaffolding alone does not request any new dependencies; run the checker and add a package only for an actual dependency request.
+Use the project's agent instructions and recorded Aurora Flutter SDK. Reuse prior answers. Onboarding or scaffolding does not authorize adding packages.
 
-Before adding a package, run `python3 <this-skill-directory>/scripts/check_dependency.py --package <name>`. The checker reads only the adjacent [checked-dependencies.yaml](scripts/checked-dependencies.yaml). It is a fast, offline lookup: it does not query a registry, modify the YAML, run Flutter, or edit a project. The user maintains the YAML manually; do not add names to it unless explicitly asked.
+## Admission policy
 
-If the result has `allowed: true`, treat the package as permitted by this project's list. Both `aurora_pub` and `source_checked_outside_aurora_pub` are accepted sections. A package recorded under `aurora_pub` is accepted by the user's rule that presence in Aurora Pub is sufficient. The list is for direct dependencies: keep the main federated plugin, such as `package_info_plus`, and do not suggest its `platform_interface` or `package_info_plus_aurora` implementation as separate additions. Let Aurora Flutter resolve those internally. Standalone Aurora-specific APIs such as `services_aurora` remain valid direct dependencies.
+Apply this decision tree to the requested package and resolved version:
 
-If a requested package is absent, first check whether it is a platform interface or an implementation of a listed main plugin; if so, use the main plugin. Otherwise, tell the user that compatibility is uncertain and follow the returned links to inspect the package's physical source and its transitive dependencies. Absence from this curated list alone does not mean the package is incompatible. Do not silently mark an unknown name as allowed or write the result into the YAML.
+Package identity is the exact name and server metadata, not an `_aurora` suffix. The server may contain Aurora ports, ordinary forks, mirrors and transitive packages such as `yaml`, all under their original names. Do not require renaming or a platform suffix for admission.
 
-When the user asks to add an allowed dependency, read the `flutter` value from the project-root `.aurora/sdk.json`. This absolute path is the only SDK source for project operations. If the file or its `flutter` value is missing, use `aurora-flutter-setup-project` with `--existing --record-only` to record the user's SDK path first; do not generate platform files or guess an SDK from `PATH` or an environment variable. Reuse an explicitly supplied SDK path already known in the conversation instead of asking again. If the recorded path is invalid, stop and report that problem instead of switching SDKs. For a user-requested SDK change, use that setup skill's explicit replacement mode before adding the package. Verify that `<recorded-root>/bin/flutter --version --machine` reports an Aurora channel.
+1. **Available on the Aurora server:** use that distribution. Native code in this port is allowed. The designated server is `https://sdk-repo.omprussia.ru/sdk/flutter/pub`; query `/api/packages/<name>` and select a compatible version from its metadata. Do not substitute a similarly named upstream release or silently change global registry configuration.
+2. **Not available on that server:** inspect the actual resolved package sources and transitive dependency closure. Allow only if they contain no native implementation/interop and no `TargetPlatform` constructs. Inspect sources, not only package descriptions or declared supported platforms. Native code includes platform implementations, FFI/native libraries and native bridges. Presence of such code anywhere in the reviewed package sources fails this branch; do not excuse it as an unused platform directory. An unavailable dependency source means insufficient evidence, not approval.
+3. **Native code or `TargetPlatform` found outside the accepted server distribution:** do not add/use the package. State the concrete file/symbol that failed the policy. Porting, replacing the package or changing this policy is a separate task, not an automatic fallback.
 
-From the project directory, run `<recorded-root>/bin/flutter pub add <name>`; for a development dependency use `dev:<name>`, and supply a version constraint only when requested. Do not add dependencies by manually editing `pubspec.yaml`, `aurora_pubspec.lock`, or package configuration. Let `flutter pub add` update them, then inspect the resulting diff and report the resolved version from `aurora_pubspec.lock` or `<recorded-root>/bin/flutter pub deps --json`. Use the same recorded SDK for every later Flutter command.
+If a non-server package passes source review, add it for the requested project/version without requiring a permanent allowlist edit or another permission round. Record the selected version, dependency closure and review evidence in the result; do not claim every future version is compatible. Do not modify the curated list unless the user asks.
 
-For a native Aurora plugin, read its README and `pubspec.yaml` for project setup, permissions, and build requirements before claiming integration is complete. Device testing is a separate step.
+## Check the designated server
+
+Run `python3 <this-skill-directory>/scripts/check_dependency.py --package <name>`. It performs a read-only request to `https://sdk-repo.omprussia.ru/sdk/flutter/pub/api/packages/<name>`. The collection URL `/api/packages/` is an HTML directory listing; per-package URLs return JSON with versions, pubspecs and archive locations. Successful metadata confirms server presence, not compatibility with every Flutter version.
+
+The checker distinguishes `available_on_aurora_server`, `needs_source_review` (HTTP 404), and `server_check_failed` (network, HTTP or metadata error). `allowed: null` means unknown, not allowed or absent. Retry or report the unavailable check instead of treating an outage as a missing port. Inspect the chosen version's SDK constraints and archive origin before adding it.
+
+The adjacent [checked-dependencies.yaml](scripts/checked-dependencies.yaml) is historical context only. `--offline` reports membership without granting admission; neither list section replaces a live server check or source review for the selected version. The helper does not download source archives, audit code, resolve dependencies or edit the project.
+
+Use the main app-facing package from the Aurora server when that is its distribution model; let the selected fork resolve its backend. Do not replace a requested package with a platform interface or add a random implementation merely to work around admission. If the accepted server package's own instructions require an implementation dependency, apply the same policy to that dependency. Generic federation rules do not override this admission policy. If server availability cannot be established, report the uncertainty; a network error does not establish that a port is absent.
+
+## Add with the selected SDK
+
+Read `flutter` from `.aurora/sdk.json`. If absent, use `aurora-flutter-setup-project --existing --record-only` with the known or user-supplied SDK path; do not generate platform files. If the recorded SDK is invalid, report it rather than switching to PATH. The setup helper's channel-name heuristic is a known limitation, not proof of fork identity.
+
+After admission, run `<recorded-root>/bin/flutter pub add <name>` from the project; use `dev:<name>` for a development dependency and the reviewed version constraint for a source-reviewed package. Do not manually edit generated package configuration or lockfiles. Inspect the resulting source, version and dependency resolution: if it differs from the reviewed selection, reassess before claiming the package usable. Use the same SDK for subsequent commands; do not invoke sfdk for Flutter package operations.
+
+For an accepted Aurora native port, inspect its instructions, permissions and build requirements before claiming integration complete. Report admission basis (Aurora server or source review), resolved version/origin, changes and remaining platform checks. Package admission is not a device-runtime test.

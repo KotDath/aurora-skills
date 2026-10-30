@@ -36,9 +36,6 @@ class FlutterSetupTests(unittest.TestCase):
         self.sfdk.chmod(0o755)
         self.commands = []
         self.channel = "flutter-aurora-test"
-        patcher = patch.object(setup, "DEFAULT_SFDK", self.root / "missing_sfdk")
-        patcher.start()
-        self.addCleanup(patcher.stop)
 
     def make_sdk(self, name):
         sdk = self.root / name
@@ -158,6 +155,18 @@ class FlutterSetupTests(unittest.TestCase):
         result = self.run_setup("--existing", "--no-pub")
         self.assertEqual(result["template"], "plugin")
 
+    def test_plugin_detection_uses_yaml_structure(self):
+        variants = [
+            "name: sample_plugin\nflutter:\n    plugin:\n        platforms: {}\n",
+            "name: sample_plugin\nflutter: {plugin: {platforms: {}}}\n",
+        ]
+        for text in variants:
+            with self.subTest(pubspec=text):
+                (self.project / "pubspec.yaml").write_text(text)
+                result = self.run_setup("--existing", "--flutter-sdk", self.sdk,
+                                        "--template", "plugin_ffi", "--no-pub")
+                self.assertEqual(result["template"], "plugin_ffi")
+
     def test_existing_app_cannot_be_converted_to_plugin_by_template_flag(self):
         with self.assertRaisesRegex(SystemExit, "must match"):
             self.run_setup("--existing", "--flutter-sdk", self.sdk, "--template", "plugin_ffi")
@@ -176,12 +185,11 @@ class FlutterSetupTests(unittest.TestCase):
             self.run_setup("--flutter-sdk", self.sdk, project=output)
         self.assertEqual(self.create_commands(), [])
 
-    def test_malformed_config_and_invalid_recorded_sfdk_are_preserved(self):
+    def test_missing_unrelated_sfdk_does_not_block_flutter_and_malformed_json_is_preserved(self):
         config = self.write_config(flutter=str(self.sdk), sfdk=str(self.root / "missing_sfdk"))
-        original = config.read_bytes()
-        with self.assertRaisesRegex(SystemExit, "Recorded sfdk"):
-            self.run_setup("--existing", "--record-only")
-        self.assertEqual(config.read_bytes(), original)
+        original = json.loads(config.read_text())
+        self.run_setup("--existing", "--record-only")
+        self.assertEqual(json.loads(config.read_text()), original)
         config.write_text("{broken")
         with self.assertRaisesRegex(SystemExit, "Invalid JSON"):
             self.run_setup("--existing", "--record-only", "--flutter-sdk", self.sdk)

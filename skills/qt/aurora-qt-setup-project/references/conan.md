@@ -26,7 +26,13 @@ migrated by the scaffolding script.
 - `rpm/version.config` pins the distribution version. `rpm/load-conan.sh` finds
   the SDK workspace and downloads the matching distribution into its
   `.cache/AuroraTools/<SDK-major>/conan/<version>/<host-architecture>/` cache
-  only when its `rpm-macros` file is absent. It runs inside the SDK/PSDK during
+  when either `rpm-macros` or the `.bootstrap-complete` marker is absent. Download
+  and extraction happen in a temporary sibling directory under a per-cache lock;
+  only a successful extraction containing `rpm-macros` is published. An older
+  unmarked cache is re-created once, rather than assumed complete. Interrupted
+  downloads/extractions do not become usable caches. A stale lock after a forced
+  process termination requires confirming no bootstrap is running before removal.
+  It runs inside the SDK/PSDK during
   RPM processing, not as an arbitrary host-side setup command.
 - The RPM spec loads that macro file, runs `%conan_install` before
   `%conan_cmake`, then `%ninja_build`. Installation runs `%ninja_install` and

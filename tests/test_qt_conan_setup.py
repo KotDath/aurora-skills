@@ -119,6 +119,7 @@ class ConanBootstrapTests(unittest.TestCase):
     def test_cached_distribution_emits_only_its_rpm_configuration(self):
         self.macros.parent.mkdir(parents=True)
         self.macros.write_text("# fixture\n")
+        (self.macros.parent / ".bootstrap-complete").touch()
         self.tool("curl", "exit 99")
         result = self.run_bootstrap()
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -139,6 +140,17 @@ class ConanBootstrapTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("%{error:Missing rpm/version.config}", result.stdout)
         self.assertFalse(self.macros.parent.exists())
+
+    def test_failed_extraction_cannot_publish_a_partial_macros_cache(self):
+        self.tool("curl", "exit 0")
+        self.tool("tar", 'printf "# partial\\n" > "$4/rpm-macros"\nexit 2')
+        for _ in range(2):
+            result = self.run_bootstrap()
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Failed to extract Conan distribution", result.stdout)
+            self.assertNotIn("%{load:", result.stdout)
+            self.assertFalse(self.macros.exists())
+            self.assertFalse((self.macros.parent / ".bootstrap-complete").exists())
 
 
 if __name__ == "__main__":
